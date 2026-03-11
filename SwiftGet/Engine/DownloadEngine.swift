@@ -1,4 +1,5 @@
 import Foundation
+import CommonCrypto
 
 /// Multi-segment parallel HTTP download engine.
 /// Each segment is downloaded on an independent URLSession data task.

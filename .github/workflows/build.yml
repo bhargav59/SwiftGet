@@ -19,6 +19,8 @@ jobs:
   build-macos-app:
     name: Build macOS App
     runs-on: macos-latest
+    permissions:
+      contents: write   # needed to create GitHub Releases and upload assets
 
     env:
       # Xcode project settings
@@ -155,6 +157,8 @@ jobs:
   build-chrome-extension:
     name: Package Chrome Extension
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to attach artifacts to GitHub Releases
 
     steps:
       - name: Checkout
@@ -182,6 +186,8 @@ jobs:
   build-native-host:
     name: Build NativeMessagingHost (both arches)
     runs-on: macos-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout

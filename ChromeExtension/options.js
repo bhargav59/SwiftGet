@@ -54,12 +54,7 @@ saveBtn.addEventListener('click', async () => {
   };
 
   await chrome.storage.sync.set({ settings });
-
-  // Notify background worker
-  const [bgSW] = await chrome.runtime.getBackgroundPage
-    ? [chrome.runtime.getBackgroundPage()]
-    : [];
-  _ = bgSW; // background handles storage.onChanged
+  // The background service worker reacts to storage.onChanged automatically.
 
   saveStatus.classList.add('visible');
   setTimeout(() => saveStatus.classList.remove('visible'), 2500);

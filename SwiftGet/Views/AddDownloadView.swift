@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct AddDownloadView: View {
     @EnvironmentObject var downloadManager: DownloadManager
@@ -216,4 +217,3 @@ struct AddDownloadView: View {
     }
 }
 
-import AppKit

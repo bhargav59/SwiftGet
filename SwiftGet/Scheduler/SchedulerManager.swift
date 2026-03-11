@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import Combine
 
 /// Manages scheduled download windows and bandwidth throttling.
@@ -164,4 +165,3 @@ final class SchedulerManager: ObservableObject {
     }
 }
 
-import AppKit

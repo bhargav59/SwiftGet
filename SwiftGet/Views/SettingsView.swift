@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import ServiceManagement
 
 struct SettingsView: View {
     @EnvironmentObject var downloadManager: DownloadManager
@@ -248,5 +250,3 @@ enum LaunchAtLoginManager {
     }
 }
 
-import AppKit
-import ServiceManagement

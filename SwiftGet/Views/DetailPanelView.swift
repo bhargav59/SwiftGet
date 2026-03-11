@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import AppKit
 
 struct DetailPanelView: View {
     @ObservedObject var task: DownloadTask
@@ -220,4 +221,3 @@ struct DetailPanelView: View {
     }
 }
 
-import AppKit

@@ -10,6 +10,8 @@ jobs:
   update-ytdlp:
     name: Check and update bundled yt-dlp
     runs-on: macos-latest
+    permissions:
+      contents: write   # needed to commit the updated yt-dlp binary
 
     steps:
       - name: Checkout

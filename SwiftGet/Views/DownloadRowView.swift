@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct DownloadRowView: View {
     @ObservedObject var task: DownloadTask
@@ -145,4 +146,3 @@ struct SegmentIndicatorView: View {
     }
 }
 
-import AppKit
