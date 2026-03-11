@@ -53,11 +53,12 @@ jobs:
       # ── Build Native Messaging Host ─────────────────────────────────────────
       - name: Build NativeMessagingHost binary
         run: |
-          swift build \
-            --product SwiftGetNativeHost \
-            --configuration release \
-            --arch arm64 \
-            --arch x86_64
+          swift build --product SwiftGetNativeHost --configuration release --arch arm64
+          swift build --product SwiftGetNativeHost --configuration release --arch x86_64
+          lipo \
+            .build/arm64-apple-macosx/release/SwiftGetNativeHost \
+            .build/x86_64-apple-macosx/release/SwiftGetNativeHost \
+            -create -output SwiftGetNativeHost-universal
 
       # ── Import signing certificate ───────────────────────────────────────────
       - name: Import Developer ID Certificate
@@ -85,6 +86,12 @@ jobs:
       # ── Archive ──────────────────────────────────────────────────────────────
       - name: Archive app
         run: |
+          set -o pipefail
+          # Disable code signing when no certificate is available (e.g. PRs)
+          SIGN_ARGS=""
+          if [ -z "${{ secrets.APPLE_CERTIFICATE_BASE64 }}" ]; then
+            SIGN_ARGS="CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
+          fi
           xcodebuild archive \
             -scheme "$SCHEME" \
             -configuration "$CONFIGURATION" \
@@ -92,16 +99,25 @@ jobs:
             -derivedDataPath "$DERIVED_DATA" \
             SKIP_INSTALL=NO \
             BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+            $SIGN_ARGS \
             | xcpretty --color
 
       # ── Export (sign) ────────────────────────────────────────────────────────
       - name: Export archive
         run: |
-          xcodebuild -exportArchive \
-            -archivePath "$ARCHIVE_PATH" \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath "$EXPORT_PATH" \
-            | xcpretty --color
+          set -o pipefail
+          if [ -n "${{ secrets.APPLE_CERTIFICATE_BASE64 }}" ]; then
+            # Signed export using Developer ID
+            xcodebuild -exportArchive \
+              -archivePath "$ARCHIVE_PATH" \
+              -exportOptionsPlist ExportOptions.plist \
+              -exportPath "$EXPORT_PATH" \
+              | xcpretty --color
+          else
+            # Unsigned export: copy .app directly from archive
+            mkdir -p "$EXPORT_PATH"
+            cp -R "$ARCHIVE_PATH/Products/Applications/SwiftGet.app" "$EXPORT_PATH/SwiftGet.app"
+          fi
 
       # ── Notarize ─────────────────────────────────────────────────────────────
       - name: Notarize app
@@ -140,6 +156,7 @@ jobs:
           pip install dmgbuild -q
           dmgbuild \
             -s dmgbuild_settings.py \
+            -D app="$EXPORT_PATH/SwiftGet.app" \
             "SwiftGet" \
             "${{ github.workspace }}/SwiftGet.dmg"
 
@@ -203,10 +220,15 @@ jobs:
 
       - name: Build universal binary
         run: |
+          # Build each arch separately so lipo can find the individual binaries
           swift build \
             --product SwiftGetNativeHost \
             --configuration release \
-            --arch arm64 \
+            --arch arm64
+
+          swift build \
+            --product SwiftGetNativeHost \
+            --configuration release \
             --arch x86_64
 
           lipo \
