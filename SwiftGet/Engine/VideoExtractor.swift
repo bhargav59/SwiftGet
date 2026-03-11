@@ -55,6 +55,7 @@ actor VideoExtractor {
 
     // MARK: - Download Video
 
+    @MainActor
     func buildDownloadTask(from url: URL, format: VideoFormat, destination: URL) -> DownloadTask {
         // If we have a direct URL, use the regular engine
         if let directURL = format.url {
