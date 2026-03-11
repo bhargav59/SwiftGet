@@ -49,9 +49,9 @@
     }
 
     const isKnownVideoHost =
-      hostname.endsWith('googlevideo.com') ||  // YouTube
-      hostname.endsWith('fbcdn.net') ||         // Facebook
-      hostname.endsWith('cdninstagram.com');    // Instagram
+      hostname === 'googlevideo.com' || hostname.endsWith('.googlevideo.com') ||  // YouTube
+      hostname === 'fbcdn.net' || hostname.endsWith('.fbcdn.net') ||               // Facebook
+      hostname === 'cdninstagram.com' || hostname.endsWith('.cdninstagram.com');   // Instagram
 
     const isVideoStream =
       url.includes('.m3u8') ||
