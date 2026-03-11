@@ -140,17 +140,6 @@ jobs:
           security list-keychain -d user -s "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-      - name: Sign app
-        if: github.event_name != 'pull_request' && env.APPLE_DEVELOPER_ID != ''
-        env:
-          APPLE_DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
-        run: |
-          codesign --deep --force --verify --verbose \
-            --sign "$APPLE_DEVELOPER_ID" \
-            --options runtime \
-            --entitlements Entitlements.plist \
-            SwiftGet.app || echo "Signing skipped (no Developer ID)"
-
       - name: Create entitlements file
         run: |
           cat > Entitlements.plist << 'EOF'
@@ -167,6 +156,17 @@ jobs:
           </dict>
           </plist>
           EOF
+
+      - name: Sign app
+        if: github.event_name != 'pull_request' && env.APPLE_DEVELOPER_ID != ''
+        env:
+          APPLE_DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+        run: |
+          codesign --deep --force --verify --verbose \
+            --sign "$APPLE_DEVELOPER_ID" \
+            --options runtime \
+            --entitlements Entitlements.plist \
+            SwiftGet.app || echo "Signing skipped (no Developer ID)"
 
       - name: Create DMG
         run: |

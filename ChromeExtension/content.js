@@ -45,7 +45,7 @@
       url.includes('.m3u8') || 
       url.includes('.mpd') || 
       url.includes('manifest') ||
-      url.includes('video') && (url.includes('.mp4') || url.includes('.webm')) ||
+      (url.includes('video') && (url.includes('.mp4') || url.includes('.webm'))) ||
       url.includes('googlevideo.com') || // YouTube
       url.includes('fbcdn.net') ||       // Facebook
       url.includes('cdninstagram.com');   // Instagram

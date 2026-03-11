@@ -58,15 +58,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       const streams = response.streams || [];
       if (streams.length > 0) {
-        videoList.innerHTML = streams.map(url => {
+        videoList.innerHTML = '';
+        streams.forEach(url => {
           const shortUrl = url.length > 60 ? url.substring(0, 57) + '...' : url;
-          return `
-            <div class="video-item">
-              <button class="video-download-btn" onclick="downloadVideo('${url.replace(/'/g, "\\'")}')">↓</button>
-              <div class="url">${shortUrl}</div>
-            </div>
-          `;
-        }).join('');
+          const item = document.createElement('div');
+          item.className = 'video-item';
+
+          const btn = document.createElement('button');
+          btn.className = 'video-download-btn';
+          btn.textContent = '↓';
+          btn.addEventListener('click', () => {
+            chrome.runtime.sendMessage({ type: 'DOWNLOAD_URL', url, filename: 'video' });
+            btn.textContent = '✓';
+            btn.disabled = true;
+          });
+
+          const urlDiv = document.createElement('div');
+          urlDiv.className = 'url';
+          urlDiv.textContent = shortUrl;
+
+          item.appendChild(btn);
+          item.appendChild(urlDiv);
+          videoList.appendChild(item);
+        });
       }
     });
   });
@@ -77,9 +91,3 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-function downloadVideo(url) {
-  chrome.runtime.sendMessage({ type: 'DOWNLOAD_URL', url, filename: 'video' });
-  const btn = event.target;
-  btn.textContent = '✓';
-  btn.disabled = true;
-}
