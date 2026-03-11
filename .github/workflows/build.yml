@@ -1,0 +1,215 @@
+name: Build & Release SwiftGet
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Ensure only one release workflow runs at a time
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-macos-app:
+    name: Build macOS App
+    runs-on: macos-latest
+    permissions:
+      contents: write   # needed to create GitHub Releases and upload assets
+
+    env:
+      # Xcode project settings
+      SCHEME: SwiftGet
+      CONFIGURATION: Release
+      DERIVED_DATA: ${{ github.workspace }}/DerivedData
+      ARCHIVE_PATH: ${{ github.workspace }}/SwiftGet.xcarchive
+      EXPORT_PATH: ${{ github.workspace }}/export
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Swift Package Manager dependencies ──────────────────────────────────
+      - name: Resolve Swift Package dependencies
+        run: swift package resolve
+
+      # ── Build Native Messaging Host ─────────────────────────────────────────
+      - name: Build NativeMessagingHost binary
+        run: |
+          swift build \
+            --product SwiftGetNativeHost \
+            --configuration release \
+            --arch arm64 \
+            --arch x86_64
+
+      # ── Select Xcode version ─────────────────────────────────────────────────
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      # ── Import signing certificate ───────────────────────────────────────────
+      - name: Import Developer ID Certificate
+        if: github.event_name != 'pull_request' && env.APPLE_CERTIFICATE_BASE64 != ''
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/swiftget.keychain
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > $RUNNER_TEMP/certificate.p12
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          security import "$RUNNER_TEMP/certificate.p12" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+      # ── Archive ──────────────────────────────────────────────────────────────
+      - name: Archive app
+        run: |
+          xcodebuild archive \
+            -scheme "$SCHEME" \
+            -configuration "$CONFIGURATION" \
+            -archivePath "$ARCHIVE_PATH" \
+            -derivedDataPath "$DERIVED_DATA" \
+            SKIP_INSTALL=NO \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+            | xcpretty --color
+
+      # ── Export (sign) ────────────────────────────────────────────────────────
+      - name: Export archive
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath "$EXPORT_PATH" \
+            | xcpretty --color
+
+      # ── Notarize ─────────────────────────────────────────────────────────────
+      - name: Notarize app
+        if: startsWith(github.ref, 'refs/tags/v') && env.APPLE_ID != ''
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          ditto -c -k --keepParent \
+            "$EXPORT_PATH/SwiftGet.app" \
+            "$RUNNER_TEMP/SwiftGet_notarize.zip"
+
+          xcrun notarytool submit \
+            "$RUNNER_TEMP/SwiftGet_notarize.zip" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait \
+            --output-format json \
+            > notarization-output.json
+
+          cat notarization-output.json
+
+          STATUS=$(python3 -c "import json,sys; d=json.load(open('notarization-output.json')); print(d.get('status',''))")
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "Notarization failed with status: $STATUS"
+            exit 1
+          fi
+
+          xcrun stapler staple "$EXPORT_PATH/SwiftGet.app"
+
+      # ── Create DMG ───────────────────────────────────────────────────────────
+      - name: Create DMG
+        run: |
+          pip install dmgbuild -q
+          dmgbuild \
+            -s dmgbuild_settings.py \
+            "SwiftGet" \
+            "${{ github.workspace }}/SwiftGet.dmg"
+
+      # ── Upload artifact ──────────────────────────────────────────────────────
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftGet-${{ github.sha }}
+          path: SwiftGet.dmg
+          retention-days: 30
+
+      # ── Release ──────────────────────────────────────────────────────────────
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: SwiftGet.dmg
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-chrome-extension:
+    name: Package Chrome Extension
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to attach artifacts to GitHub Releases
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Package extension as ZIP
+        run: |
+          cd ChromeExtension
+          zip -r ../SwiftGet-ChromeExtension.zip . -x "*.DS_Store"
+
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftGet-ChromeExtension-${{ github.sha }}
+          path: SwiftGet-ChromeExtension.zip
+          retention-days: 30
+
+      - name: Attach extension to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: SwiftGet-ChromeExtension.zip
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-native-host:
+    name: Build NativeMessagingHost (both arches)
+    runs-on: macos-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build universal binary
+        run: |
+          swift build \
+            --product SwiftGetNativeHost \
+            --configuration release \
+            --arch arm64 \
+            --arch x86_64
+
+          lipo \
+            .build/arm64-apple-macosx/release/SwiftGetNativeHost \
+            .build/x86_64-apple-macosx/release/SwiftGetNativeHost \
+            -create -output SwiftGetNativeHost-universal
+
+          file SwiftGetNativeHost-universal
+
+      - name: Upload native host artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftGetNativeHost-${{ github.sha }}
+          path: SwiftGetNativeHost-universal

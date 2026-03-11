@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Bundle identity -->
+  <key>CFBundleIdentifier</key>
+  <string>com.swiftget.app</string>
+  <key>CFBundleName</key>
+  <string>SwiftGet</string>
+  <key>CFBundleDisplayName</key>
+  <string>SwiftGet</string>
+  <key>CFBundleShortVersionString</key>
+  <string>1.0.0</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>CFBundleExecutable</key>
+  <string>SwiftGet</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
+
+  <!-- macOS minimum deployment target -->
+  <key>LSMinimumSystemVersion</key>
+  <string>12.0</string>
+
+  <!-- Supported platforms -->
+  <key>LSArchitecturePriority</key>
+  <array>
+    <string>arm64</string>
+    <string>x86_64</string>
+  </array>
+
+  <!-- URL scheme registration: swiftget:// -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>com.swiftget.app.url</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>swiftget</string>
+      </array>
+    </dict>
+  </array>
+
+  <!-- Spotlight / Quick Look UTI declarations -->
+  <key>UTImportedTypeDeclarations</key>
+  <array/>
+  <key>UTExportedTypeDeclarations</key>
+  <array/>
+
+  <!-- Application category -->
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.utilities</string>
+
+  <!-- Dock & UI settings -->
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>NSSupportsAutomaticGraphicsSwitching</key>
+  <true/>
+  <key>NSPrincipalClass</key>
+  <string>NSApplication</string>
+
+  <!-- Privacy — no microphone/camera access required -->
+  <key>NSNetworkVolumesUsageDescription</key>
+  <string>SwiftGet downloads files from the internet to your Mac.</string>
+
+  <!-- Prevent App Translocation -->
+  <key>LSFileQuarantineEnabled</key>
+  <false/>
+
+  <!-- Sparkle auto-update feed -->
+  <key>SUFeedURL</key>
+  <string>https://raw.githubusercontent.com/bhargav59/SwiftGet/main/appcast.xml</string>
+  <key>SUPublicEDKey</key>
+  <string>REPLACE_WITH_SPARKLE_PUBLIC_KEY</string>
+  <key>SUEnableAutomaticChecks</key>
+  <true/>
+</dict>
+</plist>
