@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwiftGet</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      width: 320px;
+      background: #ffffff;
+      color: #1a1a2e;
+    }
+    .header {
+      background: linear-gradient(135deg, #0070F3, #00A3FF);
+      padding: 16px 20px;
+      color: white;
+    }
+    .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    .header p { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+    .status-bar {
+      padding: 10px 20px;
+      background: #f7f9ff;
+      border-bottom: 1px solid #e8eaf6;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #ccc;
+    }
+    .status-dot.connected { background: #22c55e; }
+    .status-dot.disconnected { background: #ef4444; }
+    .section { padding: 12px 20px; border-bottom: 1px solid #f0f0f0; }
+    .section-title { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .url-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .url-input:focus { border-color: #0070F3; }
+    .btn {
+      width: 100%;
+      padding: 9px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+    .btn-primary { background: #0070F3; color: white; }
+    .btn-primary:hover { background: #0056c7; }
+    .btn-primary:disabled { background: #b0c4e8; cursor: not-allowed; }
+    .video-item {
+      padding: 8px 10px;
+      background: #f9fafb;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+    .video-item .url { color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .video-download-btn {
+      float: right;
+      padding: 2px 8px;
+      background: #0070F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+    .toggle-label { font-size: 13px; color: #374151; }
+    .toggle { position: relative; width: 40px; height: 22px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; cursor: pointer;
+      background: #ccc; border-radius: 22px;
+      transition: background 0.3s;
+    }
+    .slider:before {
+      content: '';
+      position: absolute;
+      width: 16px; height: 16px;
+      left: 3px; top: 3px;
+      background: white; border-radius: 50%;
+      transition: transform 0.3s;
+    }
+    input:checked + .slider { background: #0070F3; }
+    input:checked + .slider:before { transform: translateX(18px); }
+    .footer { padding: 12px 20px; text-align: center; }
+    .open-app-btn { background: none; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 8px 16px; font-size: 12px; cursor: pointer; color: #374151; }
+    .open-app-btn:hover { border-color: #0070F3; color: #0070F3; }
+    .empty-state { text-align: center; padding: 16px; color: #9ca3af; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚡ SwiftGet</h1>
+    <p>macOS Download Manager</p>
+  </div>
+  
+  <div class="status-bar">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">Checking connection...</span>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Add Download</div>
+    <input type="url" class="url-input" id="urlInput" placeholder="Paste URL here...">
+    <button class="btn btn-primary" id="addBtn">Download with SwiftGet</button>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Detected Videos</div>
+    <div id="videoList">
+      <div class="empty-state">No videos detected on this page</div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="toggle-row">
+      <span class="toggle-label">Intercept Downloads</span>
+      <label class="toggle">
+        <input type="checkbox" id="interceptToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <button class="open-app-btn" id="openAppBtn">Open SwiftGet App</button>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

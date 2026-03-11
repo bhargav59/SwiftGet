@@ -1,0 +1,228 @@
+name: Build, Sign & Release SwiftGet
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.swift') }}
+          restore-keys: ${{ runner.os }}-spm-
+
+      - name: Run tests
+        run: swift test --parallel
+
+  build:
+    name: Build macOS App
+    runs-on: macos-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.swift') }}
+          restore-keys: ${{ runner.os }}-spm-
+
+      - name: Build release binary (Universal)
+        run: |
+          swift build -c release --arch arm64 --arch x86_64
+
+      - name: Create app bundle
+        run: |
+          mkdir -p SwiftGet.app/Contents/MacOS
+          mkdir -p SwiftGet.app/Contents/Resources
+          
+          cp .build/apple/Products/Release/SwiftGet SwiftGet.app/Contents/MacOS/SwiftGet
+          
+          cat > SwiftGet.app/Contents/Info.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleIdentifier</key>
+            <string>com.swiftget.app</string>
+            <key>CFBundleName</key>
+            <string>SwiftGet</string>
+            <key>CFBundleDisplayName</key>
+            <string>SwiftGet</string>
+            <key>CFBundleVersion</key>
+            <string>1.0.0</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.0.0</string>
+            <key>CFBundleExecutable</key>
+            <string>SwiftGet</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>12.0</string>
+            <key>CFBundleSupportedPlatforms</key>
+            <array><string>MacOSX</string></array>
+            <key>NSPrincipalClass</key>
+            <string>NSApplication</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+            <key>NSSupportsAutomaticGraphicsSwitching</key>
+            <true/>
+            <key>CFBundleURLTypes</key>
+            <array>
+              <dict>
+                <key>CFBundleURLName</key>
+                <string>SwiftGet URL</string>
+                <key>CFBundleURLSchemes</key>
+                <array><string>swiftget</string></array>
+              </dict>
+            </array>
+            <key>NSUserNotificationAlertStyle</key>
+            <string>alert</string>
+            <key>NSDownloadsFolderUsageDescription</key>
+            <string>SwiftGet saves downloaded files to your Downloads folder.</string>
+            <key>com.apple.security.network.client</key>
+            <true/>
+            <key>com.apple.security.files.downloads.read-write</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+          
+          chmod +x SwiftGet.app/Contents/MacOS/SwiftGet
+
+      - name: Import code signing certificate
+        if: github.event_name != 'pull_request' && env.APPLE_CERTIFICATE_P12 != ''
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+          
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          
+          security import "$RUNNER_TEMP/certificate.p12" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+      - name: Sign app
+        if: github.event_name != 'pull_request' && env.APPLE_DEVELOPER_ID != ''
+        env:
+          APPLE_DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+        run: |
+          codesign --deep --force --verify --verbose \
+            --sign "$APPLE_DEVELOPER_ID" \
+            --options runtime \
+            --entitlements Entitlements.plist \
+            SwiftGet.app || echo "Signing skipped (no Developer ID)"
+
+      - name: Create entitlements file
+        run: |
+          cat > Entitlements.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>com.apple.security.network.client</key>
+            <true/>
+            <key>com.apple.security.files.downloads.read-write</key>
+            <true/>
+            <key>com.apple.security.app-sandbox</key>
+            <false/>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Create DMG
+        run: |
+          mkdir -p dmg_contents
+          cp -r SwiftGet.app dmg_contents/
+          ln -s /Applications dmg_contents/Applications
+          
+          hdiutil create \
+            -volname "SwiftGet" \
+            -srcfolder dmg_contents \
+            -ov -format UDZO \
+            -o SwiftGet-1.0.0.dmg
+          
+          rm -rf dmg_contents
+
+      - name: Notarize app
+        if: startsWith(github.ref, 'refs/tags/') && env.APPLE_NOTARIZATION_USERNAME != ''
+        env:
+          APPLE_NOTARIZATION_USERNAME: ${{ secrets.APPLE_NOTARIZATION_USERNAME }}
+          APPLE_NOTARIZATION_PASSWORD: ${{ secrets.APPLE_NOTARIZATION_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit SwiftGet-1.0.0.dmg \
+            --apple-id "$APPLE_NOTARIZATION_USERNAME" \
+            --password "$APPLE_NOTARIZATION_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          
+          xcrun stapler staple SwiftGet-1.0.0.dmg
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftGet-DMG
+          path: SwiftGet-*.dmg
+          retention-days: 30
+
+      - name: Package Chrome Extension
+        run: |
+          cd ChromeExtension
+          zip -r ../SwiftGet-Chrome-Extension.zip . -x "*.DS_Store"
+
+      - name: Upload Chrome Extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftGet-Chrome-Extension
+          path: SwiftGet-Chrome-Extension.zip
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            SwiftGet-*.dmg
+            SwiftGet-Chrome-Extension.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}

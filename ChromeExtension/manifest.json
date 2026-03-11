@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "SwiftGet",
+  "version": "1.0.0",
+  "description": "Download manager integration for SwiftGet — route downloads and video streams to your Mac",
+  "permissions": [
+    "downloads",
+    "tabs",
+    "storage",
+    "declarativeNetRequest",
+    "nativeMessaging",
+    "notifications"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "SwiftGet"
+  },
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "native_messaging_hosts": ["com.swiftget.native"]
+}
