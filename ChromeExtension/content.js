@@ -40,16 +40,26 @@
   
   function monitorURL(url) {
     if (!url || typeof url !== 'string') return;
-    
-    const isVideoStream = 
-      url.includes('.m3u8') || 
-      url.includes('.mpd') || 
+
+    let hostname = '';
+    try {
+      hostname = new URL(url).hostname;
+    } catch {
+      return;
+    }
+
+    const isKnownVideoHost =
+      hostname.endsWith('googlevideo.com') ||  // YouTube
+      hostname.endsWith('fbcdn.net') ||         // Facebook
+      hostname.endsWith('cdninstagram.com');    // Instagram
+
+    const isVideoStream =
+      url.includes('.m3u8') ||
+      url.includes('.mpd') ||
       url.includes('manifest') ||
       (url.includes('video') && (url.includes('.mp4') || url.includes('.webm'))) ||
-      url.includes('googlevideo.com') || // YouTube
-      url.includes('fbcdn.net') ||       // Facebook
-      url.includes('cdninstagram.com');   // Instagram
-    
+      isKnownVideoHost;
+
     if (isVideoStream && !detectedStreams.has(url)) {
       detectedStreams.add(url);
       notifyVideoDetected(url);
