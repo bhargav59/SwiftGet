@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwiftGet</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header>
+      <div class="logo">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor">
+          <path d="M11 2a1 1 0 011 1v10.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L10 13.586V3a1 1 0 011-1z"/>
+          <path d="M4 18a1 1 0 011-1h12a1 1 0 110 2H5a1 1 0 01-1-1z"/>
+        </svg>
+        SwiftGet
+      </div>
+      <div class="header-actions">
+        <span id="status-dot" class="status-dot" title="SwiftGet connection status"></span>
+        <button id="settings-btn" class="icon-btn" title="Settings">⚙</button>
+      </div>
+    </header>
+
+    <!-- Quick Add -->
+    <div class="section">
+      <div class="input-row">
+        <input type="url" id="url-input" placeholder="Paste a URL to download…" />
+        <button id="add-btn" class="primary-btn">Add</button>
+      </div>
+      <div id="url-error" class="error-text" style="display:none;"></div>
+    </div>
+
+    <!-- Toggle -->
+    <div class="section row">
+      <label class="toggle-label" for="enabled-toggle">
+        Intercept Downloads
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="enabled-toggle" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- Active Downloads -->
+    <div class="section">
+      <div class="section-title">Active Downloads</div>
+      <div id="downloads-list">
+        <div class="empty-state">No active downloads</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <a id="open-app-link" href="#">Open SwiftGet</a>
+      <span>·</span>
+      <a id="options-link" href="#" id="options-link">Options</a>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

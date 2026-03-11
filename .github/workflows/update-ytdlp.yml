@@ -1,0 +1,55 @@
+name: Update yt-dlp
+
+on:
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+
+jobs:
+  update-ytdlp:
+    name: Check and update bundled yt-dlp
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get latest yt-dlp release
+        id: ytdlp
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])")
+          echo "version=$LATEST" >> $GITHUB_OUTPUT
+          echo "Latest yt-dlp: $LATEST"
+
+      - name: Check current bundled version
+        id: current
+        run: |
+          if [ -f "SwiftGet/Resources/yt-dlp" ]; then
+            CURRENT=$(SwiftGet/Resources/yt-dlp --version 2>/dev/null || echo "0")
+          else
+            CURRENT="not-installed"
+          fi
+          echo "version=$CURRENT" >> $GITHUB_OUTPUT
+          echo "Current yt-dlp: $CURRENT"
+
+      - name: Download yt-dlp (macOS universal binary)
+        if: steps.ytdlp.outputs.version != steps.current.outputs.version
+        run: |
+          mkdir -p SwiftGet/Resources
+          curl -L \
+            "https://github.com/yt-dlp/yt-dlp/releases/download/${{ steps.ytdlp.outputs.version }}/yt-dlp_macos" \
+            -o SwiftGet/Resources/yt-dlp
+          chmod +x SwiftGet/Resources/yt-dlp
+          echo "Downloaded yt-dlp ${{ steps.ytdlp.outputs.version }}"
+
+      - name: Commit updated yt-dlp
+        if: steps.ytdlp.outputs.version != steps.current.outputs.version
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add SwiftGet/Resources/yt-dlp
+          git commit -m "chore: update yt-dlp to ${{ steps.ytdlp.outputs.version }}"
+          git push
