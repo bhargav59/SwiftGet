@@ -22,7 +22,7 @@ actor DownloadEngine {
 
     // MARK: - Init
 
-    init(task: DownloadTask, segmentCount: Int = 8, bandwidthLimit: Double = 0) {
+    init(task: DownloadTask, segmentCount: Int = 8, bandwidthLimit: Double = 0, cookies: String? = nil) {
         self.task = task
         self.segmentCount = segmentCount
         self.bandwidthLimit = bandwidthLimit
@@ -31,7 +31,7 @@ actor DownloadEngine {
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 3600
         // Forward cookies from the task
-        if let cookieHeader = task.cookies {
+        if let cookieHeader = cookies {
             config.httpAdditionalHeaders = ["Cookie": cookieHeader]
         }
         self.session = URLSession(configuration: config)

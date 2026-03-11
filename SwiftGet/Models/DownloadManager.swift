@@ -128,7 +128,8 @@ final class DownloadManager: ObservableObject {
         let engine = DownloadEngine(
             task: task,
             segmentCount: defaultSegmentCount,
-            bandwidthLimit: globalBandwidthLimit
+            bandwidthLimit: globalBandwidthLimit,
+            cookies: task.cookies
         )
         engines[task.id] = engine
         Task {
