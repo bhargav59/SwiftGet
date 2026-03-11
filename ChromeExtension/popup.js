@@ -113,23 +113,45 @@ function showError(msg) {
 // ─── Downloads Rendering ──────────────────────────────────────────────────────
 
 function renderDownloads(downloads) {
+  downloadsList.replaceChildren();
+
   if (!downloads || downloads.length === 0) {
-    downloadsList.innerHTML = '<div class="empty-state">No active downloads</div>';
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = 'No active downloads';
+    downloadsList.appendChild(empty);
     return;
   }
 
-  downloadsList.innerHTML = downloads.map(dl => `
-    <div class="dl-item">
-      <div class="dl-name">${escapeHtml(dl.filename)}</div>
-      <div class="dl-progress">
-        <div class="dl-progress-fill" style="width: ${Math.round((dl.progress ?? 0) * 100)}%"></div>
-      </div>
-      <div class="dl-meta">
-        <span>${formatStatus(dl.status)}</span>
-        <span>${dl.speed > 0 ? formatBytes(dl.speed) + '/s' : ''}</span>
-      </div>
-    </div>
-  `).join('');
+  for (const dl of downloads) {
+    const item = document.createElement('div');
+    item.className = 'dl-item';
+
+    const name = document.createElement('div');
+    name.className = 'dl-name';
+    name.textContent = dl.filename ?? '';
+    item.appendChild(name);
+
+    const progressWrap = document.createElement('div');
+    progressWrap.className = 'dl-progress';
+    const progressFill = document.createElement('div');
+    progressFill.className = 'dl-progress-fill';
+    progressFill.style.width = `${Math.round((dl.progress ?? 0) * 100)}%`;
+    progressWrap.appendChild(progressFill);
+    item.appendChild(progressWrap);
+
+    const meta = document.createElement('div');
+    meta.className = 'dl-meta';
+    const statusSpan = document.createElement('span');
+    statusSpan.textContent = formatStatus(dl.status);
+    const speedSpan = document.createElement('span');
+    speedSpan.textContent = dl.speed > 0 ? formatBytes(dl.speed) + '/s' : '';
+    meta.appendChild(statusSpan);
+    meta.appendChild(speedSpan);
+    item.appendChild(meta);
+
+    downloadsList.appendChild(item);
+  }
 }
 
 // ─── Native Messaging ─────────────────────────────────────────────────────────

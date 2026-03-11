@@ -362,7 +362,9 @@ actor DownloadEngine {
             }
         } else {
             // Multi-segment: concatenate all temp files in order
-            FileManager.default.createFile(atPath: finalURL.path, contents: nil)
+            if !FileManager.default.fileExists(atPath: finalURL.path) {
+                FileManager.default.createFile(atPath: finalURL.path, contents: nil)
+            }
             guard let output = FileHandle(forWritingAtPath: finalURL.path) else {
                 throw DownloadError.assemblyFailed
             }

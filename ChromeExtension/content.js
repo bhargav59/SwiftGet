@@ -56,7 +56,9 @@ let settingsCache = null;
 })();
 
 function isVideoPage() {
-  return SUPPORTED_HOSTS.some(host => location.hostname.endsWith(host));
+  return SUPPORTED_HOSTS.some(host =>
+    location.hostname === host || location.hostname.endsWith('.' + host)
+  );
 }
 
 // ─── Network Interception ────────────────────────────────────────────────────
