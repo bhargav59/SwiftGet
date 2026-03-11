@@ -74,7 +74,11 @@ class NativeMessagingBridge {
             "description": "SwiftGet Native Messaging Host",
             "path": Bundle.main.executablePath ?? "/Applications/SwiftGet.app/Contents/MacOS/SwiftGet",
             "type": "stdio",
-            "allowed_origins": ["chrome-extension://"]
+            "allowed_origins": [
+                // Replace with your Chrome Web Store extension ID after publishing
+                // e.g., "chrome-extension://abcdefghijklmnopabcdefghijklmnop/"
+                "chrome-extension://swiftget-extension-id-placeholder/"
+            ]
         ]
         
         guard let jsonData = try? JSONSerialization.data(withJSONObject: manifest, options: .prettyPrinted) else { return }

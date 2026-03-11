@@ -5,7 +5,8 @@ struct AddDownloadView: View {
     @EnvironmentObject var downloadManager: DownloadManager
     
     @State private var urlString: String = ""
-    @State private var savePath: URL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
+    @State private var savePath: URL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+        ?? FileManager.default.temporaryDirectory
     @State private var segmentCount: Int = 8
     @State private var showFilePicker = false
     @State private var priority: DownloadPriority = .normal

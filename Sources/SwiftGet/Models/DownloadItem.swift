@@ -68,7 +68,8 @@ public class DownloadItem: ObservableObject, Identifiable {
         self.url = url
         self.filename = url.lastPathComponent.isEmpty ? "download" : url.lastPathComponent
         self.category = FileCategory.from(url: url)
-        let defaultDir = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
+        let defaultDir = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
         self.savePath = savePath ?? defaultDir.appendingPathComponent(self.filename)
     }
     

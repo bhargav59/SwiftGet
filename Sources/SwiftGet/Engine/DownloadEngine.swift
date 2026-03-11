@@ -152,7 +152,9 @@ class DownloadEngine: NSObject {
                 return
             }
             
-            FileManager.default.createFile(atPath: tempURL.path, contents: nil)
+            if !FileManager.default.fileExists(atPath: tempURL.path) {
+                FileManager.default.createFile(atPath: tempURL.path, contents: nil)
+            }
             let fileHandle = try FileHandle(forWritingTo: tempURL)
             fileHandle.seekToEndOfFile()
             
@@ -229,7 +231,9 @@ class DownloadEngine: NSObject {
             }
             
             let fileURL = item.savePath
-            FileManager.default.createFile(atPath: fileURL.path, contents: nil)
+            if !FileManager.default.fileExists(atPath: fileURL.path) {
+                FileManager.default.createFile(atPath: fileURL.path, contents: nil)
+            }
             let fileHandle = try FileHandle(forWritingTo: fileURL)
             fileHandle.seekToEndOfFile()
             

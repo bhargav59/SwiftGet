@@ -14,7 +14,6 @@
     dailymotion: ['dailymotion.com'],
     twitch: ['twitch.tv'],
     reddit: ['reddit.com'],
-    vimeo2: ['vimeo.com'],
     rumble: ['rumble.com']
   };
   
