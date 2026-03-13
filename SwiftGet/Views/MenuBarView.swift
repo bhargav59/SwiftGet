@@ -12,7 +12,7 @@ struct MenuBarView: View {
             // Header
             HStack {
                 Image(systemName: "arrow.down.circle.fill")
-                    .foregroundStyle(.accentColor)
+                    .foregroundStyle(Color.accentColor)
                 Text("SwiftGet")
                     .font(.headline)
                 Spacer()

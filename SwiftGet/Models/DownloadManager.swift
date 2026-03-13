@@ -43,8 +43,10 @@ final class DownloadManager: ObservableObject {
     }
 
     func remove(_ task: DownloadTask) {
-        task.status = .failed // Stop any engine
-        engines[task.id]?.cancel()
+        task.status = .failed
+        if let engine = engines[task.id] {
+            Task { await engine.cancel() }
+        }
         engines[task.id] = nil
         tasks.removeAll { $0.id == task.id }
         persistenceController.delete(task)
@@ -53,7 +55,9 @@ final class DownloadManager: ObservableObject {
 
     func pause(_ task: DownloadTask) {
         guard task.status.isActive else { return }
-        engines[task.id]?.pause()
+        if let engine = engines[task.id] {
+            Task { await engine.pause() }
+        }
         task.status = .paused
         persistenceController.save(task)
         scheduleNext()
@@ -88,7 +92,9 @@ final class DownloadManager: ObservableObject {
 
     func cancelAll() {
         tasks.forEach { task in
-            engines[task.id]?.cancel()
+            if let engine = engines[task.id] {
+                Task { await engine.cancel() }
+            }
             engines[task.id] = nil
             task.status = .paused
         }
@@ -184,7 +190,11 @@ final class DownloadManager: ObservableObject {
     private func startSpeedUpdates() {
         speedUpdateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.engines.values.forEach { $0.sampleSpeed() }
+                guard let self else { return }
+                let engines = self.engines.values
+                Task {
+                    for engine in engines { await engine.sampleSpeed() }
+                }
             }
         }
     }

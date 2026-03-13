@@ -53,7 +53,7 @@ struct GeneralSettingsTab: View {
         Form {
             Section("Startup") {
                 Toggle("Launch SwiftGet at Login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, enabled in
+                    .onChange(of: launchAtLogin) { enabled in
                         LaunchAtLoginManager.setEnabled(enabled)
                     }
             }
