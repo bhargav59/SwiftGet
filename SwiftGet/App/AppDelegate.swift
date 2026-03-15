@@ -81,7 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         )
     }
 
-    @objc private func handleDownloadCompleted(_ note: Notification) {
+    @MainActor @objc private func handleDownloadCompleted(_ note: Notification) {
         guard let task = note.object as? DownloadTask else { return }
         let content = UNMutableNotificationContent()
         content.title = "Download Complete"
@@ -95,7 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         UNUserNotificationCenter.current().add(request)
     }
 
-    @objc private func handleDownloadFailed(_ note: Notification) {
+    @MainActor @objc private func handleDownloadFailed(_ note: Notification) {
         guard let task = note.object as? DownloadTask else { return }
         let content = UNMutableNotificationContent()
         content.title = "Download Failed"
