@@ -56,7 +56,8 @@ actor DownloadEngine {
         }
 
         // 2. Resume existing segments or build new segment list
-        let segments = buildSegments(fileSize: fileSize, supportsRanges: supportsRanges)
+        let existingSegments = await task.segments
+        let segments = buildSegments(fileSize: fileSize, supportsRanges: supportsRanges, existingSegments: existingSegments)
         await MainActor.run { task.segments = segments }
 
         // 3. Download each segment
@@ -116,7 +117,7 @@ actor DownloadEngine {
     private func probeServer() async -> (supportsRanges: Bool, fileSize: Int64, filename: String?, mimeType: String?, etag: String?) {
         var request = URLRequest(url: task.url)
         request.httpMethod = "HEAD"
-        if let referrer = task.referrer {
+        if let referrer = await task.referrer {
             request.setValue(referrer, forHTTPHeaderField: "Referer")
         }
         request.setValue("SwiftGet/1.0", forHTTPHeaderField: "User-Agent")
@@ -158,14 +159,14 @@ actor DownloadEngine {
 
     // MARK: - Segment Building
 
-    private func buildSegments(fileSize: Int64, supportsRanges: Bool) -> [DownloadSegment] {
+    private func buildSegments(fileSize: Int64, supportsRanges: Bool, existingSegments: [DownloadSegment] = []) -> [DownloadSegment] {
         guard supportsRanges, fileSize > 0, segmentCount > 1 else {
             // Single segment covering the whole file
             return [DownloadSegment(id: 0, startByte: 0, endByte: max(0, fileSize - 1))]
         }
 
         // Check for existing partial segments (resume support)
-        let existing = task.segments
+        let existing = existingSegments
         if !existing.isEmpty && existing.allSatisfy({ $0.endByte <= fileSize - 1 }) {
             return existing
         }
@@ -204,7 +205,7 @@ actor DownloadEngine {
         var request = URLRequest(url: task.url)
         let resumeOffset = segment.startByte + segment.downloadedBytes
         request.setValue("bytes=\(resumeOffset)-\(segment.endByte)", forHTTPHeaderField: "Range")
-        if let referrer = task.referrer {
+        if let referrer = await task.referrer {
             request.setValue(referrer, forHTTPHeaderField: "Referer")
         }
         request.setValue("SwiftGet/1.0", forHTTPHeaderField: "User-Agent")
@@ -285,7 +286,7 @@ actor DownloadEngine {
 
     private func downloadSingleThread() async {
         var request = URLRequest(url: task.url)
-        if let referrer = task.referrer {
+        if let referrer = await task.referrer {
             request.setValue(referrer, forHTTPHeaderField: "Referer")
         }
         request.setValue("SwiftGet/1.0", forHTTPHeaderField: "User-Agent")
@@ -302,7 +303,7 @@ actor DownloadEngine {
             guard let http = response as? HTTPURLResponse,
                   (http.statusCode == 200 || http.statusCode == 206) else { return }
 
-            if task.totalBytes == 0, let contentLength = http.value(forHTTPHeaderField: "Content-Length"),
+            if await task.totalBytes == 0, let contentLength = http.value(forHTTPHeaderField: "Content-Length"),
                let size = Int64(contentLength) {
                 await MainActor.run { task.totalBytes = size + existingSize }
             }
@@ -345,7 +346,7 @@ actor DownloadEngine {
     // MARK: - Assembly
 
     private func assembleFile(segments: [DownloadSegment], fileSize: Int64, supportsRanges: Bool) async throws {
-        let destination = task.localFileURL
+        let destination = await task.localFileURL
         let finalURL = uniqueFileURL(for: destination)
 
         // Ensure output directory exists
@@ -385,7 +386,7 @@ actor DownloadEngine {
         }
 
         // Optional: verify checksum
-        if let expectedMD5 = task.checksumMD5 {
+        if let expectedMD5 = await task.checksumMD5 {
             let actualMD5 = try md5(of: finalURL)
             if actualMD5 != expectedMD5 {
                 try? FileManager.default.removeItem(at: finalURL)
