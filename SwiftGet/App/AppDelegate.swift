@@ -25,12 +25,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     // MARK: - URL Scheme (swiftget://)
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        for url in urls {
-            guard url.scheme == "swiftget" else { continue }
-            handleSwiftGetURL(url)
+        Task { @MainActor in
+            for url in urls {
+                guard url.scheme == "swiftget" else { continue }
+                self.handleSwiftGetURL(url)
+            }
         }
     }
 
+    @MainActor
     private func handleSwiftGetURL(_ url: URL) {
         // swiftget://add?url=<encoded-url>&filename=<name>&referrer=<ref>
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
