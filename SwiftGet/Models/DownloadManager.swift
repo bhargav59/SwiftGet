@@ -138,9 +138,10 @@ final class DownloadManager: ObservableObject {
             cookies: task.cookies
         )
         engines[task.id] = engine
-        Task {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
             await engine.start()
-            handleEngineCompletion(for: task)
+            self.handleEngineCompletion(for: task)
         }
     }
 
